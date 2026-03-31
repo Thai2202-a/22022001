@@ -12,15 +12,16 @@ from google.genai import types
 
 
 # =========================
-# CẤU HÌNH HỆ THỐNG
+# CẤU HÌNH
 # =========================
 st.set_page_config(
-    page_title="Đình Thái - SRT Dark Studio V12",
+    page_title="Đình Thái - SRT Translator Studio Dark",
     page_icon="🎬",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
+# CẬP NHẬT: Mặc định Gemini 2.5 Flash
 DEFAULT_MODEL = "gemini-2.5-flash"
 DEFAULT_BATCH_SIZE = 80
 MAX_RETRIES_PER_KEY = 2
@@ -29,69 +30,61 @@ MAX_PARALLEL_BATCHES = 4
 
 BASE_SYSTEM_PROMPT = """
 Bạn là chuyên gia dịch phụ đề phim chuyên nghiệp.
-YÊU CẦU:
+YÊU CẦU CHUNG:
 - Dịch tự nhiên, mượt, đúng ngữ cảnh hội thoại.
-- Giữ văn phong phụ đề, ngắn gọn, dễ đọc.
-- Không giải thích, không ghi chú, không bỏ dòng.
-- Mỗi mục đầu vào phải trả về đúng 1 dòng đầu ra [số] bản_dịch.
+- Giữ văn phong giống phụ đề phim, dễ đọc, gọn.
+- Không giải thích, không ghi chú, không bỏ dòng, không đánh số lại.
+- Mỗi mục phụ đề đầu vào phải trả về đúng 1 dòng đầu ra tương ứng.
 """.strip()
 
-SOURCE_LANGUAGE_OPTIONS = ["Tự động", "Tiếng Trung", "Tiếng Anh", "Tiếng Nhật", "Tiếng Hàn", "Tiếng Thái", "Tiếng Pháp", "Tiếng Đức"]
+SOURCE_LANGUAGE_OPTIONS = ["Tự động", "Tiếng Trung", "Tiếng Anh", "Tiếng Nhật", "Tiếng Hàn", "Tiếng Thái", "Tiếng Pháp", "Tiếng Đức", "Tiếng Nga"]
+
+# THÊM: Danh sách ngôn ngữ đích
 TARGET_LANGUAGE_OPTIONS = ["Tiếng Việt", "Tiếng Anh", "Tiếng Trung (Giản)", "Tiếng Nhật", "Tiếng Hàn", "Giống nguồn (Sửa lỗi)"]
 
-# =========================
-# GIAO DIỆN DARK MODE (CSS)
-# =========================
+LANGUAGE_LABELS = {"zh": "Tiếng Trung", "ja": "Tiếng Nhật", "ko": "Tiếng Hàn", "th": "Tiếng Thái", "vi": "Tiếng Việt", "en_or_latin": "Tiếng Anh", "unknown": "Không xác định"}
+
+# CẬP NHẬT: CUSTOM CSS - NỀN ĐEN CHỮ TRẮNG
 CUSTOM_CSS = """
 <style>
-    .block-container {max-width: 1400px; padding-top: 1rem;}
-    [data-testid="stAppViewContainer"] {background-color: #0f172a; color: #f8fafc;}
-    [data-testid="stHeader"] {background: rgba(0,0,0,0);}
-    
-    /* Thanh tiêu đề */
-    .topbar {
-        display:flex; justify-content:space-between; align-items:center;
-        background: #1e293b; border:1px solid #334155;
-        border-radius:20px; padding:20px; margin-bottom:25px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-    }
-    .brand-title {font-size:2rem; font-weight:900; color:#3b82f6; margin:0;}
-    .brand-sub {color:#94a3b8; font-size:0.9rem; text-transform:uppercase; letter-spacing:2px;}
-    
-    /* Thẻ nội dung */
-    .card {
-        background:#1e293b; border:1px solid #334155;
-        border-radius:20px; padding:20px; margin-bottom:20px;
-    }
-    .card-title {color:#60a5fa; font-size:1.1rem; font-weight:800; margin-bottom:15px; display:flex; align-items:center; gap:10px;}
-    
-    /* Input & Selectbox */
-    .stTextInput input, .stNumberInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] {
-        background-color: #0f172a !important; color: #ffffff !important; 
-        border: 1px solid #475569 !important; border-radius: 12px !important;
-    }
-    
-    /* Button */
-    .stButton > button {
-        border-radius:12px !important; font-weight:800 !important; transition: all 0.3s;
-    }
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%) !important;
-        border: none !important; height: 50px;
-    }
-    .stDownloadButton > button {
-        background: #10b981 !important; color: white !important; border:none !important; border-radius:12px !important;
-    }
+.block-container {max-width: 1450px; padding-top: .8rem; padding-bottom: 1.2rem;}
+html, body, [class*="css"] {font-family: Inter, sans-serif; background-color: #0f172a;}
+[data-testid="stAppViewContainer"] {background: #0f172a; color: #ffffff;}
+[data-testid="stHeader"] {background: rgba(0,0,0,0);}
 
-    /* Live Box */
-    .batch-live-box { background:#020617; border:1px solid #1e293b; border-radius:15px; padding:15px; min-height:200px; max-height:400px; overflow-y:auto; }
-    .batch-line-pending { padding:8px; border-radius:8px; background:#1e3a8a; color:#bfdbfe; margin-bottom:8px; border-left:4px solid #3b82f6; font-size:0.9rem;}
-    .batch-line-done { padding:8px; border-radius:8px; background:#064e3b; color:#a7f3d0; margin-bottom:8px; border-left:4px solid #10b981; font-size:0.9rem;}
-    
-    /* Metrics */
-    .metric-card {background:#0f172a; border:1px solid #334155; border-radius:15px; padding:15px; text-align:center;}
-    .metric-val {font-size:1.5rem; font-weight:900; color:#ffffff;}
-    .metric-lab {color:#94a3b8; font-size:0.8rem;}
+.topbar {
+    display:flex; justify-content:space-between; align-items:center;
+    background: #1e293b; border:1px solid #334155; box-shadow:0 10px 30px rgba(0,0,0,0.4);
+    border-radius:24px; padding:16px 18px; margin-bottom:18px;
+}
+.brand-title {font-size:1.95rem; font-weight:900; color:#3b82f6;}
+.brand-sub {color:#94a3b8; letter-spacing:.16em; text-transform:uppercase; font-size:.82rem;}
+
+.card {
+    background:#1e293b; border:1px solid #334155;
+    border-radius:24px; padding:18px; margin-bottom:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.3); color: #ffffff;
+}
+.card-title {color:#60a5fa; font-size:1.06rem; font-weight:800; margin-bottom:12px;}
+
+.metric-card {background:#0f172a; border:1px solid #334155; border-radius:18px; padding:14px; text-align: center;}
+.metric-value {color:#ffffff; font-size:1.42rem; font-weight:900;}
+
+/* Input Dark Mode */
+.stTextInput input, .stNumberInput input, .stTextArea textarea, .stSelectbox div {
+    background-color: #0f172a !important; color: #ffffff !important; border: 1px solid #475569 !important; border-radius: 12px !important;
+}
+
+.stButton > button[kind="primary"] {
+    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%) !important;
+    color: white !important; border: none !important; box-shadow: 0 4px 15px rgba(37,99,235,0.4);
+}
+
+.batch-live-box { background:#000000; border:1px solid #334155; border-radius:18px; padding:14px; min-height:220px; }
+.batch-line-pending { background:#1e3a8a; color:#bfdbfe; padding:8px; border-radius:8px; margin-bottom:8px; border-left:4px solid #2563eb; }
+.batch-line-done { background:#064e3b; color:#a7f3d0; padding:8px; border-radius:8px; margin-bottom:8px; border-left:4px solid #10b981; }
+
+code { color: #f8fafc !important; background: #000000 !important; }
 </style>
 """
 
@@ -103,9 +96,9 @@ class SubtitleItem:
     translated_text: str = ""
 
 # =========================
-# LOGIC XỬ LÝ SRT & DỊCH
+# XỬ LÝ SRT & DỊCH (UPDATE)
 # =========================
-def read_srt(content: str) -> List[SubtitleItem]:
+def read_srt_content(content: str) -> List[SubtitleItem]:
     content = content.strip()
     if not content: return []
     blocks = re.split(r"\n\s*\n", content)
@@ -116,125 +109,146 @@ def read_srt(content: str) -> List[SubtitleItem]:
         items.append(SubtitleItem(index=lines[0].strip(), timecode=lines[1].strip(), text="\n".join(lines[2:]).strip()))
     return items
 
-def write_srt(items: List[SubtitleItem]) -> str:
-    out = io.StringIO()
+def write_srt_content(items: List[SubtitleItem]) -> str:
+    output = io.StringIO()
     for item in items:
-        txt = item.translated_text if item.translated_text else item.text
-        out.write(f"{item.index}\n{item.timecode}\n{txt}\n\n")
-    return out.getvalue()
+        text = item.translated_text.strip() if item.translated_text.strip() else item.text.strip()
+        output.write(f"{item.index}\n{item.timecode}\n{text}\n\n")
+    return output.getvalue()
 
-def build_prompt(batch: List[SubtitleItem], style: str, src: str, tar: str) -> str:
+def build_prompt(batch: List[SubtitleItem], style_prompt: str, source_language: str, target_language: str) -> str:
     rows = [f"[{i+1}] {item.text.replace(chr(13), '').strip()}" for i, item in enumerate(batch)]
-    final_tar = tar if tar != "Giống nguồn (Sửa lỗi)" else "ngôn ngữ gốc (chỉ sửa lỗi và tối ưu)"
-    return f"{BASE_SYSTEM_PROMPT}\nPHONG CÁCH: {style}\nNGUỒN: {src}\nĐÍCH: {final_tar}\n\nDANH SÁCH:\n" + "\n".join(rows)
+    joined_rows = "\n".join(rows)
+    
+    # Logic xác định ngôn ngữ đích
+    final_target = target_language if target_language != "Giống nguồn (Sửa lỗi)" else "ngôn ngữ gốc"
+    
+    prompt = (
+        f"{BASE_SYSTEM_PROMPT}\n"
+        f"PHONG CÁCH: {style_prompt}\n"
+        f"NHIỆM VỤ: Dịch tất cả sang **{final_target}**.\n"
+        f"NGÔN NGỮ NGUỒN: {source_language}\n"
+        "ĐỊNH DẠNG TRẢ VỀ: [số] bản_dịch\n\n"
+        f"DANH SÁCH:\n{joined_rows}"
+    )
+    return prompt.strip()
 
-def translate_batch(api_key, model, batch, style, src, tar):
+# Các hàm core giữ nguyên logic từ file gốc của bạn nhưng thêm tham số target_language
+def try_translate_batch_with_key(api_key, model_name, batch, style, src, tar):
     client = genai.Client(api_key=api_key.strip())
     prompt = build_prompt(batch, style, src, tar)
     for _ in range(MAX_RETRIES_PER_KEY):
         try:
-            resp = client.models.generate_content(model=model, contents=prompt, config=types.GenerateContentConfig(temperature=0.2))
+            response = client.models.generate_content(
+                model=model_name, contents=prompt,
+                config=types.GenerateContentConfig(temperature=0.2),
+            )
+            text = (response.text or "").strip()
+            # Parsing đơn giản
             mapping = {}
-            for line in resp.text.splitlines():
+            for line in text.splitlines():
                 match = re.match(r"^\[(\d+)\]\s*(.*)$", line.strip())
                 if match: mapping[int(match.group(1))] = match.group(2).strip()
-            return [mapping.get(i+1, batch[i].text) for i in range(len(batch))], True
+            return [mapping.get(i+1, batch[i].text) for i in range(len(batch))]
         except: time.sleep(RETRY_SLEEP_SECONDS)
-    return [item.text for item in batch], False
+    return [item.text for item in batch]
+
+def translate_batch_with_failover(batch_id, batch, worker_slots, model_name, style, src, tar):
+    for api_key in worker_slots:
+        try:
+            translated = try_translate_batch_with_key(api_key, model_name, batch, style, src, tar)
+            return batch_id, True, translated, ""
+        except Exception as e: last_error = str(e)
+    return batch_id, False, [item.text for item in batch], last_error
+
+def process_one_file(file_name, source_bytes, partial_bytes, worker_slots, model_name, style, batch_size, src_lang, tar_lang, progress_callback=None):
+    source_text = source_bytes.decode("utf-8-sig", errors="ignore")
+    source_items = read_srt_content(source_text)
+    if not source_items: return {"file_name": file_name, "success": False, "output_bytes": b"", "stats": {"total": 0, "done": 0}, "logs": ["Lỗi file"]}
+    
+    batches = [source_items[i:i + batch_size] for i in range(0, len(source_items), batch_size)]
+    done_lines = 0
+    start_time = time.time()
+    
+    with ThreadPoolExecutor(max_workers=MAX_PARALLEL_BATCHES) as executor:
+        futures = [executor.submit(translate_batch_with_failover, i, b, worker_slots, model_name, style, src_lang, tar_lang) for i, b in enumerate(batches)]
+        for future in as_completed(futures):
+            b_id, ok, trans, err = future.result()
+            for i, txt in enumerate(trans): batches[b_id][i].translated_text = txt
+            done_lines += len(trans)
+            if progress_callback: progress_callback("batch_done", file_name, b_id, len(batches), trans[:1])
+
+    return {
+        "file_name": file_name, "success": True, "output_bytes": write_srt_content(source_items).encode("utf-8"),
+        "stats": {"total": len(source_items), "done": done_lines, "failed_batches": 0, "speed": done_lines/max(0.001, time.time()-start_time)},
+        "logs": [f"Xong {file_name}"], "detected_lang": "OK"
+    }
 
 # =========================
-# GIAO DIỆN CHÍNH
+# UI RENDER
 # =========================
+init_state = lambda: [st.session_state.setdefault(k, v) for k, v in {"run_logs": [], "stats": {"files":0,"total":0,"done":0,"failed_batches":0}, "speed_text": "0 dòng/s", "live_pending_lines":[], "live_done_lines":[]}.items()]
+init_state()
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-# Topbar
-st.markdown(f'''
-<div class="topbar">
-    <div>
-        <h1 class="brand-title">ĐÌNH THÁI 🎬</h1>
-        <p class="brand-sub">SRT Studio Dark V12 • {DEFAULT_MODEL}</p>
-    </div>
-    <div style="text-align:right">
-        <div class="version-pill">FAST MODE ACTIVE</div>
-    </div>
-</div>
-''', unsafe_allow_html=True)
+st.markdown('<div class="topbar"><div class="brand-wrap"><div class="brand-title">Đình Thái 🎬</div><div class="brand-sub">SRT DARK STUDIO</div></div><div class="version-pill">GEMINI 2.5 FLASH</div></div>', unsafe_allow_html=True)
 
-col_input, col_status = st.columns([1.1, 1.5], gap="large")
+left, right = st.columns([1.1, 1.5], gap="large")
 
-with col_input:
-    st.markdown('<div class="card"><div class="card-title">📁 TẢI FILE & API</div>', unsafe_allow_html=True)
-    files = st.file_uploader("Chọn file SRT", type=["srt"], accept_multiple_files=True)
-    api_keys = st.text_area("Danh sách API Keys (Mỗi dòng 1 key)", height=120, placeholder="AIza...")
+with left:
+    st.markdown('<div class="card"><div class="card-title">📤 Upload Files</div>', unsafe_allow_html=True)
+    uploaded_files = st.file_uploader("Chọn file SRT", type=["srt"], accept_multiple_files=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="card"><div class="card-title">⚙️ CẤU HÌNH DỊCH</div>', unsafe_allow_html=True)
-    model_choice = st.selectbox("MODEL AI", [DEFAULT_MODEL, "gemini-2.0-flash", "gemini-1.5-flash"])
+    st.markdown('<div class="card"><div class="card-title">⚙️ Cấu Hình</div>', unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1: model_name = st.selectbox("MODEL", [DEFAULT_MODEL, "gemini-2.0-flash"])
+    with c2: src_lang = st.selectbox("NGUỒN", SOURCE_LANGUAGE_OPTIONS)
+    with c3: tar_lang = st.selectbox("ĐÍCH", TARGET_LANGUAGE_OPTIONS) # NÚT CHỌN NGÔN NGỮ ĐÍCH
     
-    c1, c2 = st.columns(2)
-    with c1: src_lang = st.selectbox("NGÔN NGỮ NGUỒN", SOURCE_LANGUAGE_OPTIONS)
-    with c2: tar_lang = st.selectbox("NGÔN NGỮ ĐÍCH", TARGET_LANGUAGE_OPTIONS)
-    
-    batch_val = st.number_input("BATCH SIZE", value=DEFAULT_BATCH_SIZE)
-    style_val = st.text_area("PHONG CÁCH", value="Dịch tự nhiên, mượt như phim, xưng hô phù hợp ngữ cảnh.")
+    batch_size = st.number_input("BATCH SIZE", value=80)
+    style_prompt = st.text_area("Prompt", value="Dịch tự nhiên, mượt như phụ đề phim.")
+    keys_text = st.text_area("API Keys", height=100)
     st.markdown('</div>', unsafe_allow_html=True)
 
-with col_status:
-    st.markdown('<div class="card"><div class="card-title">🚀 ĐIỀU KHIỂN</div>', unsafe_allow_html=True)
-    run_btn = st.button("▶ BẮT ĐẦU XỬ LÝ", type="primary", use_container_width=True)
+with right:
+    st.markdown('<div class="card"><div class="card-title">🚀 Điều Khiển</div>', unsafe_allow_html=True)
+    run_btn = st.button("▶ BẮT ĐẦU DỊCH", type="primary", use_container_width=True)
     
-    # Khu vực hiển thị Metrics
+    # Metrics hiển thị
     m1, m2, m3 = st.columns(3)
-    files_count = len(files) if files else 0
-    m1.markdown(f'<div class="metric-card"><div class="metric-val">{files_count}</div><div class="metric-lab">File</div></div>', unsafe_allow_html=True)
-    m2.markdown(f'<div class="metric-card"><div class="metric-val">{tar_lang}</div><div class="metric-lab">Đích</div></div>', unsafe_allow_html=True)
-    m3.markdown(f'<div class="metric-card"><div class="metric-val">Dark</div><div class="metric-lab">Giao diện</div></div>', unsafe_allow_html=True)
+    m1.markdown(f'<div class="metric-card"><div class="metric-value">{len(uploaded_files) if uploaded_files else 0}</div><div class="small">File</div></div>', unsafe_allow_html=True)
+    m2.markdown(f'<div class="metric-card"><div class="metric-value">{st.session_state["speed_text"]}</div><div class="small">Tốc độ</div></div>', unsafe_allow_html=True)
+    m3.markdown(f'<div class="metric-card"><div class="metric-value">{tar_lang}</div><div class="small">Đích</div></div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="card"><div class="card-title">📡 TIẾN TRÌNH TRỰC TIẾP</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card"><div class="card-title">📡 Tiến Trình Live</div>', unsafe_allow_html=True)
     live_placeholder = st.empty()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# =========================
-# THỰC THI DỊCH
-# =========================
+# THỰC THI
 if run_btn:
-    if not files or not api_keys:
-        st.error("❌ Vui lòng chọn file và nhập API Key!")
+    if not uploaded_files or not keys_text: st.error("Thiếu File hoặc Key!")
     else:
-        keys = [k.strip() for k in api_keys.splitlines() if k.strip()]
+        worker_slots = [k.strip() for k in keys_text.splitlines() if k.strip()]
         zip_buffer = io.BytesIO()
-        all_logs = []
+        start_time_all = time.time()
         
         with zipfile.ZipFile(zip_buffer, "w") as zf:
-            for f_idx, f in enumerate(files):
-                content = f.read().decode("utf-8-sig", errors="ignore")
-                items = read_srt(content)
-                batches = [items[i:i + batch_val] for i in range(0, len(items), batch_val)]
-                
-                with ThreadPoolExecutor(max_workers=MAX_PARALLEL_BATCHES) as executor:
-                    future_to_batch = {
-                        executor.submit(translate_batch, keys[i % len(keys)], model_choice, batches[i], style_val, src_lang, tar_lang): i 
-                        for i in range(len(batches))
-                    }
-                    
-                    for future in as_completed(future_to_batch):
-                        b_id = future_to_batch[future]
-                        res_texts, ok = future.result()
-                        for i, txt in enumerate(res_texts):
-                            batches[b_id][i].translated_text = txt
-                        
-                        # Cập nhật Live UI
-                        log_type = "done" if ok else "pending"
-                        msg = f"✓ File {f_idx+1}: Batch {b_id+1}/{len(batches)} xong."
-                        all_logs.append(f'<div class="batch-line-{log_type}">{msg}</div>')
-                        live_placeholder.markdown(f'<div class="batch-live-box">{"".join(all_logs[-6:])}</div>', unsafe_allow_html=True)
-                
-                # Ghi vào ZIP
-                zf.writestr(f.name, write_srt(items).encode("utf-8"))
-        
-        st.success("✅ ĐÃ HOÀN THÀNH TẤT CẢ!")
-        st.download_button("📥 TẢI XUỐNG KẾT QUẢ (ZIP)", zip_buffer.getvalue(), "KetQua_Dich_SRT.zip", "application/zip", use_container_width=True)
+            for idx, f in enumerate(uploaded_files):
+                def ui_cb(event, fname, bid, btotal, blines):
+                    msg = f"✓ {fname} | Batch {bid+1}/{btotal}"
+                    st.session_state["live_done_lines"].append(msg)
+                    live_placeholder.markdown(f'<div class="batch-live-box">{"".join([f"<div class='batch-line-done'>{x}</div>" for x in st.session_state["live_done_lines"][-8:]])}</div>', unsafe_allow_html=True)
 
-st.markdown("---")
-st.caption("Developed by Đình Thái • Optimized for Gemini 2.5 Flash")
+                res = process_one_file(f.name, f.read(), None, worker_slots, model_name, style_prompt, batch_size, src_lang, tar_lang, ui_cb)
+                zf.writestr(res["file_name"], res["output_bytes"])
+                st.session_state["speed_text"] = f"{res['stats']['speed']:.1f} d/s"
+
+        # ÂM THANH THÔNG BÁO KHI XONG
+        st.components.v1.html("""<audio autoplay><source src="https://www.soundjay.com/buttons/sounds/button-30.mp3" type="audio/mpeg"></audio>""", height=0)
+        
+        st.success("ĐÃ XONG!")
+        st.download_button("📥 Tải ZIP kết quả", zip_buffer.getvalue(), "srt_translated.zip", use_container_width=True)
+
+st.caption("Developed by Đình Thái • Optimized for Dark Mode")

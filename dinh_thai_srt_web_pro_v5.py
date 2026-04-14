@@ -64,6 +64,7 @@ TARGET_LANGUAGE_OPTIONS = [
     "Tiếng Nhật",
     "Tiếng Hàn",
     "Tiếng Pháp",
+    "Tiếng Bồ Đào Nha",
     "Giống ngôn ngữ nguồn (Sửa lỗi)"
 ]
 
